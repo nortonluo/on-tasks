@@ -12,6 +12,7 @@ var uuid = require('node-uuid'),
 describe(require('path').basename(__filename), function () {
     var base = require('./base-spec');
     var pollerHelper;
+    var parser;
 
     base.before(function (context) {
         // create a child injector with on-core and the base pieces we need to test this
@@ -28,6 +29,7 @@ describe(require('path').basename(__filename), function () {
         ]);
         context.Jobclass = helper.injector.get('Job.Ipmi');
         pollerHelper = helper.injector.get('JobUtils.PollerHelper');
+        parser = helper.injector.get('JobUtils.IpmiCommandParser');
     });
     before(function () {
         fs = helper.injector.get('fs');
@@ -135,6 +137,47 @@ describe(require('path').basename(__filename), function () {
                     expect(self.ipmi.cachedPowerState[testData.workItemId]).to.equal(status.power);
                 });
         });
+        
+        it("should send powerStatus Change alert", function() {
+            var self = this;
+            var testState ={powerStatus: 'on'}
+            var testData = {workItemId: 'abc', node:"unittestnode"};
+            self.ipmi.cachedPowerStatus = 'off';
+            return self.ipmi.powerStatusAlerter(testState, testData)
+                .then(function(status) {
+                    expect(self.ipmi._publishPollerAlert).to.have.been.calledOnce;
+                    expect(status).to.deep.equal(testState);
+                    expect(self.ipmi.cachedPowerStatus).to.equal(testState.powerStatus);
+                });
+        });
+        it("should not send powerStatus Change alert", function() {
+            var self = this;
+            var testState ={powerStatus: 'off'}
+            var testData = {workItemId: 'abc', node:"unittestnode"};
+            self.ipmi.cachedPowerStatus = 'off';
+            return self.ipmi.powerStatusAlerter(testState, testData)
+                .then(function(status) {
+                    expect(self.ipmi._publishPollerAlert).to.not.be.called;
+                    expect(status).to.deep.equal(testState);
+                    expect(self.ipmi.cachedPowerStatus).to.equal(testState.powerStatus);
+                });
+        });
+       
+        it("should return powerStatus", function() {
+            var self = this;
+            var testState ='off';
+            var data = {host:"172.31.128.4",user: "admin", password:"Password1"};
+            self.ipmi.powerStatus = this.sandbox.stub().resolves("Power State is off");
+            parser.parsePowerStatusData = this.sandbox.stub().resolves("off");
+            this.sandbox.spy(self.ipmi, 'powerStatusAlerter')
+            return self.ipmi.collectpowerStatus(data)
+                .then(function(status) {
+                    expect(status).to.equal(testState);
+                    expect(self.ipmi.powerStatusAlerter).to.have.been.calledOnec;         
+                    expect(parser.parsePowerStatusData).to.have.been.calledOnce;
+                });
+        });
+         
         it("should send sel data", function() {
             var self = this;
             var data = {
