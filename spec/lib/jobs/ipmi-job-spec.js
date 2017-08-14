@@ -162,12 +162,25 @@ describe(require('path').basename(__filename), function () {
                     expect(self.ipmi.cachedPowerStatus).to.equal(testState.powerStatus);
                 });
         });
-       
+      
+        it("should not send powerStatus Change alert at begining", function() {
+            var self = this;
+            var testState ={powerStatus: 'off'}
+            var testData = {workItemId: 'abc', node:"unittestnode"};
+            self.ipmi.cachedPowerStatus = '';
+            return self.ipmi.powerStatusAlerter(testState, testData)
+                .then(function(status) {
+                    expect(self.ipmi._publishPollerAlert).to.not.be.called;
+                    expect(status).to.deep.equal(testState);
+                    expect(self.ipmi.cachedPowerStatus).to.equal(testState.powerStatus);
+                });
+        });
+ 
         it("should return powerStatus", function() {
             var self = this;
-            var testResult = { powerStatus: 'on' };
+            var testResult = { powerStatus: 'off' };
             var data = {host:"172.31.128.4",user: "admin", password:"Password1"};
-            this.ipmi.powerStatus = this.sandbox.stub().resolves("Power State is on");
+            this.ipmi.powerStatus = this.sandbox.stub().resolves("Power State is off");
             //parser.parsePowerStatusData = this.sandbox.stub().resolves("off");
             this.sandbox.spy(parser, 'parsePowerStatusData')
             this.sandbox.spy(self.ipmi, 'powerStatusAlerter')
