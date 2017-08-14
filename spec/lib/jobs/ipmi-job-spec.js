@@ -165,14 +165,15 @@ describe(require('path').basename(__filename), function () {
        
         it("should return powerStatus", function() {
             var self = this;
-            var testState ='off';
+            var testResult = { powerStatus: 'on' };
             var data = {host:"172.31.128.4",user: "admin", password:"Password1"};
-            self.ipmi.powerStatus = this.sandbox.stub().resolves("Power State is off");
-            parser.parsePowerStatusData = this.sandbox.stub().resolves("off");
+            this.ipmi.powerStatus = this.sandbox.stub().resolves("Power State is on");
+            //parser.parsePowerStatusData = this.sandbox.stub().resolves("off");
+            this.sandbox.spy(parser, 'parsePowerStatusData')
             this.sandbox.spy(self.ipmi, 'powerStatusAlerter')
             return self.ipmi.collectpowerStatus(data)
                 .then(function(status) {
-                    expect(status).to.equal(testState);
+                    expect(status).to.deep.equal(testResult);
                     expect(self.ipmi.powerStatusAlerter).to.have.been.calledOnec;         
                     expect(parser.parsePowerStatusData).to.have.been.calledOnce;
                 });
